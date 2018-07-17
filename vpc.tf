@@ -3,15 +3,21 @@
 resource "aws_vpc" "default" {
   cidr_block = "${var.vpc_cidr}"
   enable_dns_hostnames = true
-  tags {
-    Name = "${var.sitename}"
-    Terraform = "true"
-  }
+  tags = "${
+    map(
+      "Name", "${var.sitename}",
+      "Terraform", "true",
+      "kubernetes.io/cluster/${var.sitename}", "shared",
+      )
+  }"
 }
 
 resource "aws_internet_gateway" "default" {
   vpc_id = "${aws_vpc.default.id}"
-  tags { Terraform = "true" }
+  tags {
+    Name = "${var.sitename}"
+    Terraform = "true"
+  }
 }
 
 resource "aws_subnet" "public" {
@@ -21,10 +27,13 @@ resource "aws_subnet" "public" {
   availability_zone = "${var.azlist[count.index]}"
   map_public_ip_on_launch = true
   depends_on = ["aws_internet_gateway.default"]
-  tags {
-    Name = "${var.sitename}-public-${var.azlist[count.index]}"
-    Terraform = "true"
-  }
+  tags = "${
+    map(
+      "Name", "${var.sitename}-public-${var.azlist[count.index]}",
+      "Terraform", "true",
+      "kubernetes.io/cluster/${var.sitename}", "shared",
+      )
+  }"
   lifecycle = { create_before_destroy = true }
 }
 
@@ -34,7 +43,10 @@ resource "aws_route_table" "public" {
     cidr_block = "0.0.0.0/0"
     gateway_id = "${aws_internet_gateway.default.id}"
   }
-  tags { Terraform = "true" }
+  tags {
+    Name = "${var.sitename}"
+    Terraform = "true"
+  }
 }
 
 resource "aws_route_table_association" "public" {
