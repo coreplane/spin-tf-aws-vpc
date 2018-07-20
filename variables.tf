@@ -20,3 +20,8 @@ variable "az_subnet_cidrs" {
     "us-east-1c" = "10.128.2.0/24"
   }
 }
+
+variable "enable_private_dns_zone" {
+  description = "Whether to create a Route53 private zone for hosts inside the VPC"
+  default = true
+}

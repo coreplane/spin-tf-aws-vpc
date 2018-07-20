@@ -37,5 +37,5 @@ output "fe_haproxy_security_group_id" {
 }
 
 output "private_dns_zone_id" {
-  value = "${aws_route53_zone.private_dns.zone_id}"
+  value = "${join(",", aws_route53_zone.private_dns.*.zone_id)}"
 }
