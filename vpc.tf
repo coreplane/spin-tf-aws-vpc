@@ -69,6 +69,7 @@ resource "aws_db_subnet_group" "db_subnet_group" {
 }
 
 resource "aws_route53_zone" "private_dns" {
+  count = "${var.enable_private_dns_zone ? 1 : 0}"
   name = "${var.sitedomain}"
   vpc_id = "${aws_vpc.default.id}"
   tags { Terraform = "true" }
