@@ -29,11 +29,11 @@ output "ssh_access_security_group_id" {
 }
 
 output "fe_elb_security_group_id" {
-  value = "${aws_security_group.fe_elb.id}"
+  value = "${join(",", aws_security_group.fe_elb.*.id)}"
 }
 
 output "fe_haproxy_security_group_id" {
-  value = "${aws_security_group.fe_haproxy.id}"
+  value = "${join(",", aws_security_group.fe_haproxy.*.id)}"
 }
 
 output "private_dns_zone_id" {

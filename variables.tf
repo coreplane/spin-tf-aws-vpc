@@ -25,3 +25,8 @@ variable "enable_private_dns_zone" {
   description = "Whether to create a Route53 private zone for hosts inside the VPC"
   default = true
 }
+
+variable "enable_frontend_security_groups" {
+  description = "Whether to create VPC security groups to support front-end ingress"
+  default = true
+}

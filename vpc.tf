@@ -104,6 +104,7 @@ resource "aws_security_group" "ssh_access" {
 # since putting them inside a frontend module would create dependency cycle problems.
 
 resource "aws_security_group" "fe_elb" {
+  count = "${var.enable_frontend_security_groups ? 1 : 0}"
   name = "${var.sitename}-fe-elb"
   description = "Front-end public ELB security group"
   vpc_id = "${aws_vpc.default.id}"
@@ -132,6 +133,7 @@ resource "aws_security_group" "fe_elb" {
 }
 
 resource "aws_security_group" "fe_haproxy" {
+  count = "${var.enable_frontend_security_groups ? 1 : 0}"
   name = "${var.sitename}-fe-haproxy"
   description = "Front-end HAProxy behind the public ELB"
   vpc_id = "${aws_vpc.default.id}"
@@ -141,6 +143,7 @@ resource "aws_security_group" "fe_haproxy" {
   }
 }
 resource "aws_security_group_rule" "fe_haproxy_egress" {
+  count = "${var.enable_frontend_security_groups ? 1 : 0}"
   security_group_id = "${aws_security_group.fe_haproxy.id}"
   type = "egress"
   from_port = 0
@@ -149,6 +152,7 @@ resource "aws_security_group_rule" "fe_haproxy_egress" {
   cidr_blocks = ["0.0.0.0/0"]
 }
 resource "aws_security_group_rule" "fe_haproxy_ingress_elb" {
+  count = "${var.enable_frontend_security_groups ? 1 : 0}"
   security_group_id = "${aws_security_group.fe_haproxy.id}"
   type = "ingress"
   # HTTP redirect on 80
@@ -160,6 +164,7 @@ resource "aws_security_group_rule" "fe_haproxy_ingress_elb" {
   source_security_group_id = "${aws_security_group.fe_elb.id}"
 }
 resource "aws_security_group_rule" "fe_haproxy_ingress_stats_ssh" {
+  count = "${var.enable_frontend_security_groups ? 1 : 0}"
   security_group_id = "${aws_security_group.fe_haproxy.id}"
   type = "ingress"
   from_port = 1936
