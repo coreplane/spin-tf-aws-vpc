@@ -20,6 +20,16 @@ output "public_subnet_ids" {
   value = "${aws_subnet.public.*.id}"
 }
 
+output "lambda_subnet_id0" {
+  value = "${element(aws_subnet.lambda.*.id, 0)}"
+}
+output "lambda_subnet_id1" {
+  value = "${element(aws_subnet.lambda.*.id, 1)}"
+}
+output "lambda_subnet_ids" {
+  value = "${aws_subnet.lambda.*.id}"
+}
+
 output "db_subnet_group_id" {
   value = "${aws_db_subnet_group.db_subnet_group.id}"
 }

@@ -174,3 +174,60 @@ resource "aws_security_group_rule" "fe_haproxy_ingress_stats_ssh" {
   protocol  = "tcp"
   cidr_blocks = ["${split(",", var.ssh_sources)}"]
 }
+
+# For running Lambdas in the VPC, we need to create a private subnet,
+# since this is the only way to grant them internet accesss.
+
+# Private VPC subnets dedicated to Lambdas
+resource "aws_subnet" "lambda" {
+  vpc_id = "${aws_vpc.default.id}"
+  count = "${var.enable_lambda_subnets ? length(var.azlist) : 0}"
+  cidr_block = "${lookup(var.lambda_subnet_cidrs, var.azlist[count.index])}"
+  availability_zone = "${var.azlist[count.index]}"
+  depends_on = ["aws_internet_gateway.default"]
+  tags = "${
+    map(
+      "Name", "${var.sitename}-lambda-${var.azlist[count.index]}",
+      "Terraform", "true"
+      )
+  }"
+  lifecycle = { create_before_destroy = true }
+}
+
+# NAT Gateways for Lambda subnets. These exist in the corresponding public subnet.
+# And could be shared with any other services that require NAT gateways.
+
+resource "aws_eip" "nat_gw" {
+  count = "${var.enable_lambda_subnets ? length(var.azlist) : 0}"
+  vpc = true
+}
+resource "aws_nat_gateway" "gw" {
+  count = "${var.enable_lambda_subnets ? length(var.azlist) : 0}"
+  allocation_id = "${element(aws_eip.nat_gw.*.id, count.index)}"
+  # note: these belong in PUBLIC subnets
+  subnet_id = "${element(aws_subnet.public.*.id, count.index)}"
+  tags = "${
+    map(
+      "Name", "${var.sitename}-ngw-${var.azlist[count.index]}",
+      "Terraform", "true"
+      )
+  }"
+  depends_on = ["aws_internet_gateway.default"]
+}
+# Route table to link Lambda subnets to NAT gateways for outgoing traffic
+resource "aws_route_table" "lambda_subnet_gw" {
+  count = "${var.enable_lambda_subnets ? length(var.azlist) : 0}"
+  vpc_id = "${aws_vpc.default.id}"
+  route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id = "${element(aws_nat_gateway.gw.*.id, count.index)}"
+  }
+  tags {
+    Name = "${var.sitename}-lambda-${var.azlist[count.index]}",
+  }
+}
+resource "aws_route_table_association" "lambda_subnet_gw" {
+  count = "${var.enable_lambda_subnets ? length(var.azlist) : 0}"
+  subnet_id = "${element(aws_subnet.lambda.*.id, count.index)}"
+  route_table_id = "${element(aws_route_table.lambda_subnet_gw.*.id, count.index)}"
+}
