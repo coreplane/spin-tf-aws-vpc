@@ -14,7 +14,7 @@ resource "aws_vpc" "default" {
 
 resource "aws_internet_gateway" "default" {
   vpc_id = "${aws_vpc.default.id}"
-  tags {
+  tags = {
     Name = "${var.sitename}"
     Terraform = "true"
   }
@@ -34,7 +34,7 @@ resource "aws_subnet" "public" {
       "kubernetes.io/cluster/${var.sitename}", "shared",
       )
   }"
-  lifecycle = { create_before_destroy = true }
+  lifecycle { create_before_destroy = true }
 }
 
 resource "aws_route_table" "public" {
@@ -43,7 +43,7 @@ resource "aws_route_table" "public" {
     cidr_block = "0.0.0.0/0"
     gateway_id = "${aws_internet_gateway.default.id}"
   }
-  tags {
+  tags = {
     Name = "${var.sitename}"
     Terraform = "true"
   }
@@ -62,7 +62,7 @@ resource "aws_db_subnet_group" "db_subnet_group" {
     # XXX can we make this include all AZs automatically?
     subnet_ids = ["${aws_subnet.public.0.id}",
                   "${aws_subnet.public.1.id}"]
-    tags {
+    tags = {
       Name = "${var.sitename}-db"
       Terraform = "true"
     }
@@ -74,7 +74,7 @@ resource "aws_route53_zone" "private_dns" {
   vpc {
     vpc_id = "${aws_vpc.default.id}"
   }
-  tags { Terraform = "true" }
+  tags = {Terraform = "true" }
 }
 
 
@@ -88,7 +88,7 @@ resource "aws_security_group" "ssh_access" {
     from_port = 22
     to_port   = 22
     protocol  = "tcp"
-    cidr_blocks = ["${split(",", var.ssh_sources)}"]
+    cidr_blocks = split(",", var.ssh_sources)
   }
   egress {
     from_port = 0
@@ -96,7 +96,7 @@ resource "aws_security_group" "ssh_access" {
     protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  tags { 
+  tags = {
     Name = "${var.sitename}-ssh-access" 
     Terraform = "true"
   }
@@ -128,7 +128,7 @@ resource "aws_security_group" "fe_elb" {
     protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  tags { 
+  tags = {
     Name = "${var.sitename}-fe-elb" 
     Terraform = "true"
   }
@@ -139,14 +139,14 @@ resource "aws_security_group" "fe_haproxy" {
   name = "${var.sitename}-fe-haproxy"
   description = "Front-end HAProxy behind the public ELB"
   vpc_id = "${aws_vpc.default.id}"
-  tags { 
+  tags = {
     Name = "${var.sitename}-fe-haproxy" 
     Terraform = "true"
   }
 }
 resource "aws_security_group_rule" "fe_haproxy_egress" {
   count = "${var.enable_frontend_security_groups ? 1 : 0}"
-  security_group_id = "${aws_security_group.fe_haproxy.id}"
+  security_group_id = "${aws_security_group.fe_haproxy.*.id[0]}"
   type = "egress"
   from_port = 0
   to_port = 0
@@ -155,7 +155,7 @@ resource "aws_security_group_rule" "fe_haproxy_egress" {
 }
 resource "aws_security_group_rule" "fe_haproxy_ingress_elb" {
   count = "${var.enable_frontend_security_groups ? 1 : 0}"
-  security_group_id = "${aws_security_group.fe_haproxy.id}"
+  security_group_id = "${aws_security_group.fe_haproxy.*.id[0]}"
   type = "ingress"
   # HTTP redirect on 80
   # normal post-SSL HTTP traffic on 81
@@ -163,16 +163,16 @@ resource "aws_security_group_rule" "fe_haproxy_ingress_elb" {
   from_port = 80
   to_port   = 82
   protocol  = "tcp"
-  source_security_group_id = "${aws_security_group.fe_elb.id}"
+  source_security_group_id = "${aws_security_group.fe_elb.*.id[0]}"
 }
 resource "aws_security_group_rule" "fe_haproxy_ingress_stats_ssh" {
   count = "${var.enable_frontend_security_groups ? 1 : 0}"
-  security_group_id = "${aws_security_group.fe_haproxy.id}"
+  security_group_id = "${aws_security_group.fe_haproxy.*.id[0]}"
   type = "ingress"
   from_port = 1936
   to_port   = 1936
   protocol  = "tcp"
-  cidr_blocks = ["${split(",", var.ssh_sources)}"]
+  cidr_blocks = split(",", var.ssh_sources)
 }
 
 # For running Lambdas in the VPC, we need to create a private subnet,
@@ -191,7 +191,7 @@ resource "aws_subnet" "lambda" {
       "Terraform", "true"
       )
   }"
-  lifecycle = { create_before_destroy = true }
+  lifecycle { create_before_destroy = true }
 }
 
 # NAT Gateways for Lambda subnets. These exist in the corresponding public subnet.
@@ -222,8 +222,8 @@ resource "aws_route_table" "lambda_subnet_gw" {
     cidr_block = "0.0.0.0/0"
     nat_gateway_id = "${element(aws_nat_gateway.gw.*.id, count.index)}"
   }
-  tags {
-    Name = "${var.sitename}-lambda-${var.azlist[count.index]}",
+  tags = {
+    Name = "${var.sitename}-lambda-${var.azlist[count.index]}"
   }
 }
 resource "aws_route_table_association" "lambda_subnet_gw" {
