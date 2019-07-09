@@ -21,13 +21,13 @@ output "public_subnet_ids" {
 }
 
 output "lambda_subnet_id0" {
-  value = "${element(aws_subnet.lambda.*.id, 0)}"
+  value = var.enable_lambda_subnets ? aws_subnet.lambda[0].id : ""
 }
 output "lambda_subnet_id1" {
-  value = "${element(aws_subnet.lambda.*.id, 1)}"
+  value = var.enable_lambda_subnets ? aws_subnet.lambda[1].id : ""
 }
 output "lambda_subnet_ids" {
-  value = "${aws_subnet.lambda.*.id}"
+  value = var.enable_lambda_subnets ? aws_subnet.lambda[*].id : []
 }
 
 output "db_subnet_group_id" {
