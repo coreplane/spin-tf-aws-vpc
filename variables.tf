@@ -9,7 +9,7 @@ variable "vpc_cidr" {
 
 variable "azlist" {
   description = "List of AWS availability zones to use, including region prefix"
-  type = "list"
+  type = list(string)
   default = ["us-east-1a","us-east-1c"]
 }
 
