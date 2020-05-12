@@ -30,6 +30,13 @@ output "lambda_subnet_ids" {
   value = var.enable_lambda_subnets ? aws_subnet.lambda[*].id : []
 }
 
+output "nat_gateway_private_ips" {
+  value = var.enable_lambda_subnets ? aws_nat_gateway.gw[*].private_ip : []
+}
+output "nat_gateway_public_ips" {
+  value = var.enable_lambda_subnets ? aws_nat_gateway.gw[*].public_ip : []
+}
+
 output "db_subnet_group_id" {
   value = "${aws_db_subnet_group.db_subnet_group.id}"
 }
