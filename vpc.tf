@@ -3,11 +3,11 @@
 resource "aws_vpc" "default" {
   cidr_block = var.vpc_cidr
   enable_dns_hostnames = true
-  tags = map(
-      "Name", var.sitename,
-      "Terraform", "true",
-      "kubernetes.io/cluster/${var.sitename}", "shared",
-      )
+  tags = tomap({
+      "Name" = var.sitename
+      "Terraform" = "true"
+      "kubernetes.io/cluster/${var.sitename}" = "shared"
+  })
 }
 
 resource "aws_internet_gateway" "default" {
@@ -25,11 +25,11 @@ resource "aws_subnet" "public" {
   availability_zone = var.azlist[count.index]
   map_public_ip_on_launch = true
   depends_on = [aws_internet_gateway.default]
-  tags = map(
-      "Name", "${var.sitename}-public-${var.azlist[count.index]}",
-      "Terraform", "true",
-      "kubernetes.io/cluster/${var.sitename}", "shared",
-      )
+  tags = tomap({
+      "Name" = "${var.sitename}-public-${var.azlist[count.index]}"
+      "Terraform" = "true"
+      "kubernetes.io/cluster/${var.sitename}" = "shared"
+  })
   lifecycle { create_before_destroy = true }
 }
 
@@ -93,7 +93,7 @@ resource "aws_security_group" "ssh_access" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags = {
-    Name = "${var.sitename}-ssh-access" 
+    Name = "${var.sitename}-ssh-access"
     Terraform = "true"
   }
 }
@@ -125,7 +125,7 @@ resource "aws_security_group" "fe_elb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags = {
-    Name = "${var.sitename}-fe-elb" 
+    Name = "${var.sitename}-fe-elb"
     Terraform = "true"
   }
 }
@@ -136,7 +136,7 @@ resource "aws_security_group" "fe_haproxy" {
   description = "Front-end HAProxy behind the public ELB"
   vpc_id = aws_vpc.default.id
   tags = {
-    Name = "${var.sitename}-fe-haproxy" 
+    Name = "${var.sitename}-fe-haproxy"
     Terraform = "true"
   }
 }
@@ -181,10 +181,10 @@ resource "aws_subnet" "lambda" {
   cidr_block = lookup(var.lambda_subnet_cidrs, var.azlist[count.index])
   availability_zone = var.azlist[count.index]
   depends_on = [aws_internet_gateway.default]
-  tags = map(
-      "Name", "${var.sitename}-lambda-${var.azlist[count.index]}",
-      "Terraform", "true"
-      )
+  tags = tomap({
+      "Name" = "${var.sitename}-lambda-${var.azlist[count.index]}"
+      "Terraform" = "true"
+  })
   lifecycle { create_before_destroy = true }
 }
 
@@ -200,10 +200,10 @@ resource "aws_nat_gateway" "gw" {
   allocation_id = element(aws_eip.nat_gw.*.id, count.index)
   # note: these belong in PUBLIC subnets
   subnet_id = element(aws_subnet.public.*.id, count.index)
-  tags = map(
-      "Name", "${var.sitename}-ngw-${var.azlist[count.index]}",
-      "Terraform", "true"
-      )
+  tags = tomap({
+      "Name" = "${var.sitename}-ngw-${var.azlist[count.index]}"
+      "Terraform" = "true"
+  })
   depends_on = [aws_internet_gateway.default]
 }
 # Route table to link Lambda subnets to NAT gateways for outgoing traffic
@@ -214,9 +214,9 @@ resource "aws_route_table" "lambda_subnet_gw" {
     cidr_block = "0.0.0.0/0"
     nat_gateway_id = element(aws_nat_gateway.gw.*.id, count.index)
   }
-  tags = {
+  tags = tomap({
     Name = "${var.sitename}-lambda-${var.azlist[count.index]}"
-  }
+  })
 }
 resource "aws_route_table_association" "lambda_subnet_gw" {
   count = var.enable_lambda_subnets ? length(var.azlist) : 0
