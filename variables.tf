@@ -43,3 +43,8 @@ variable "enable_lambda_subnets" {
   description = "Whether to create private subnets for running Lambdas. (note: creates NAT Gateways, which incur extra cost)."
   default = false
 }
+
+variable "enable_ipv6" {
+  description = "Configure subnets to use IPv6"
+  default = false
+}

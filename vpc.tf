@@ -3,6 +3,7 @@
 resource "aws_vpc" "default" {
   cidr_block = var.vpc_cidr
   enable_dns_hostnames = true
+  assign_generated_ipv6_cidr_block = var.enable_ipv6
   tags = tomap({
       "Name" = var.sitename
       "Terraform" = "true"
@@ -22,6 +23,7 @@ resource "aws_subnet" "public" {
   vpc_id = aws_vpc.default.id
   count = length(var.azlist)
   cidr_block = lookup(var.az_subnet_cidrs, var.azlist[count.index])
+  ipv6_cidr_block = var.enable_ipv6 ? cidrsubnet(aws_vpc.default.ipv6_cidr_block, 4, count.index) : null
   availability_zone = var.azlist[count.index]
   map_public_ip_on_launch = true
   depends_on = [aws_internet_gateway.default]
@@ -35,14 +37,23 @@ resource "aws_subnet" "public" {
 
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.default.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.default.id
-  }
   tags = {
     Name = var.sitename
     Terraform = "true"
   }
+}
+
+resource "aws_route" "public_to_internet_gateway_ipv4" {
+  route_table_id = aws_route_table.public.id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id = aws_internet_gateway.default.id
+}
+
+resource "aws_route" "public_to_internet_gateway_ipv6" {
+  count = var.enable_ipv6 ? 1 : 0
+  route_table_id = aws_route_table.public.id
+  destination_ipv6_cidr_block = var.enable_ipv6 ? "::/0" : null
+  gateway_id = aws_internet_gateway.default.id
 }
 
 resource "aws_route_table_association" "public" {
@@ -91,6 +102,7 @@ resource "aws_security_group" "ssh_access" {
     to_port = 0
     protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = var.enable_ipv6 ? ["::/0"] : null
   }
   tags = {
     Name = "${var.sitename}-ssh-access"
@@ -123,6 +135,7 @@ resource "aws_security_group" "fe_elb" {
     to_port = 0
     protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = var.enable_ipv6 ? ["::/0"] : null
   }
   tags = {
     Name = "${var.sitename}-fe-elb"
@@ -148,6 +161,7 @@ resource "aws_security_group_rule" "fe_haproxy_egress" {
   to_port = 0
   protocol = "-1"
   cidr_blocks = ["0.0.0.0/0"]
+  ipv6_cidr_blocks = var.enable_ipv6 ? ["::/0"] : null
 }
 resource "aws_security_group_rule" "fe_haproxy_ingress_elb" {
   count = var.enable_frontend_security_groups ? 1 : 0
