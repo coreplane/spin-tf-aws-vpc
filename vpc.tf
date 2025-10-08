@@ -207,7 +207,6 @@ resource "aws_subnet" "lambda" {
 
 resource "aws_eip" "nat_gw" {
   count = var.enable_lambda_subnets ? length(var.azlist) : 0
-  vpc = true
 }
 resource "aws_nat_gateway" "gw" {
   count = var.enable_lambda_subnets ? length(var.azlist) : 0
